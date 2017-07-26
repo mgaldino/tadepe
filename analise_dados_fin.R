@@ -4,7 +4,7 @@ library(tidyverse)
 library(stringr)
 
 
-setwd("C:\\Users\\mgaldino\\2017\\Google\\Tá de Pé\\Arquivos")
+setwd("C:\\Users\\mgaldino\\2017\\Google\\Ta de Pe\\Arquivos")
 load("arquivos_simec_fin_v2.RData")
 
 simec_fin1 <- lista_objetos[[3]]
