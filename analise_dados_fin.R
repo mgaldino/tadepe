@@ -86,3 +86,5 @@ simec_gastos <- simec %>%
 simec_gastos %>%
   group_by(Situação) %>%
   summarise(sum(pagamento_cte_jun17))
+
+#Jessica começou a partir daqui 
