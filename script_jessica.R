@@ -431,8 +431,6 @@ idh_cor %>%
 #importar o polígono contendo o mapa do Brasil
 br <- getData('GADM', country='BRA', level=1) # 
 
-# criando paleta
-pal27 <- viridis(27,option="C")
 
 obras_uf <- obras_situacao_tb %>%
   filter(obra_a_ser_entregue == "sim") %>%
@@ -452,26 +450,15 @@ obras_uf <- obras_uf %>%
   inner_join(codigo_uf[,-1], by=c("UF"="Sigla")) %>%
   rename(uf = UFN)
 
-
+# adiciona no shape file os dados do simec já resumidos
 br <- append_data(br, obras_uf, key.shp="NAME_1",key.data="uf", ignore.na = F)
 
 br$sigla <- str_replace(br$HASC_1,"BR.","")
 
-## cores
-
-region_col$mycolors[region_col$iso_a3 == "GBR"] <- "#00ff00"
-region_col$mycolors[region_col$iso_a3 == "FRA"] <- "#ff0000"
-region_col$mycolors[region_col$iso_a3 == "DEU"] <- "#ffff00"
-region_col$mycolors[region_col$iso_a3 == "ESP"] <- "#0000ff"
-
-#Import color selection from region_col dataframe into Europe SpatialPolygonDataFrame
-Europe$color <- region_col$mycolors
-
-
 ## plotando o mapa
 perc_mapa_entregar <- tm_shape(br) + 
   tm_fill(col="obras_a_entregar",
-          labels=c("De 0 a 200","De 200 a 400","De 400 a 600","De 600 a 800", "> 800"),
+          #labels=c("De 0 a 200","De 200 a 400","De 400 a 600","De 600 a 800", "> 800"),
           #palette= c(),
           title="",
           convert2density=F,
@@ -490,7 +477,7 @@ perc_mapa_entregar
 save_tmap(perc_mapa_entregar,
           "mapa_obras_a_entregar_com_sigla_v4.png", 
           width = 10,height=10, dpi=300)
-
+## tabela para Bárbara
 write.table(obras_uf, "obras_uf.csv", sep=";", row.names=T)
 
 
