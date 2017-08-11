@@ -142,10 +142,11 @@ idh %>%
 # chart scatterplot idh e percentual de obra paralisada
 idh_uf_chart <- ggplot(idh, aes(idh_uf_correto, perc, label = uf)) + 
   geom_smooth(method="lm", se=F) +
-geom_text(aes(label=uf, size=2),hjust=0, vjust=0) + theme_bw() + 
+geom_text(aes(label=uf,  alpha=.8), size=3,hjust=0, vjust=0) + theme_bw() + 
   theme(legend.position = "none") +
   ylab("percentual de obras paralisadas") + xlab("IDH") +
   scale_y_continuous(label=percent, lim=c(0, .5)) + 
   scale_x_continuous(lim=c(.6, .85)) +  guides(fill=FALSE)
 
-ggsave(idh_uf_chart, file="idh_e_obras_paralisadas.png", height = 10, width= 8)
+ggsave(idh_uf_chart, file="idh_e_obras_paralisadas.png", 
+       height = 8, width= 14, scale=.5)
