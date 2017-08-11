@@ -126,7 +126,7 @@ idh <- simec_atlas %>%
          idhm_r = as.numeric(gsub(",", "\\.", idhm_r))) %>%
   filter(!is.na(idhm)) %>%
   group_by(uf) %>%
-  summarise(num_obras = sum(contador),
+  summarise(num_obras = sum(obra_a_ser_entregue == "sim"),
             num_paralisadas= sum(paralisada_tb == "paralisada"),
             idh_uf = mean(idhm),
             idh_uf_correto = my_idh_mean(educ=idhm_e, long=idhm_l, rpc=idhm_r, pop),
@@ -146,5 +146,6 @@ geom_text(aes(label=uf, size=2),hjust=0, vjust=0) + theme_bw() +
   theme(legend.position = "none") +
   ylab("percentual de obras paralisadas") + xlab("IDH") +
   scale_y_continuous(label=percent, lim=c(0, .5)) + 
-  scale_x_continuous(label=percent, lim=c(.6, .9)) +  guides(fill=FALSE)
+  scale_x_continuous(lim=c(.6, .85)) +  guides(fill=FALSE)
 
+ggsave(idh_uf_chart, file="idh_e_obras_paralisadas.png", height = 10, width= 8)
