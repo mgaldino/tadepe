@@ -4,6 +4,11 @@ library(tidyverse)
 library(stringr)
 library(lubridate)
 library(scales)
+library(raster) # Para baixar o polígono 426
+library(rvest) # Para importar a base de dados
+library(viridis) # Para selecionar uma bonita paleta de cores
+library(tmap) # Para plotar o mapa
+library(tmaptools)
 
 #Endereço para achar as obras: http://simec.mec.gov.br/painelObras/dadosobra.php?obra=
 setwd("C:\\Users\\mgaldino\\2017\\Google\\Ta de Pe\\relatorio\\tadepe")
@@ -352,6 +357,14 @@ obras_situacao_tb %>%
   mutate(obras_a_serem_entregues = sum(total),
          perc = round(total/obras_a_serem_entregues, 2))
 
+obras_situacao_tb %>%
+  summarise(total=n(), 
+            custo = sum(pagamento_cte_jun17, na.rm=T),
+            num_obras_custo = sum(!is.na(pagamento_cte_jun17))) %>%
+  mutate(obras_a_serem_entregues = sum(total),
+         perc = round(total/obras_a_serem_entregues, 2))
+
+
 ## paralisada por UF
 chart_uf <- obras_situacao_tb %>%
   filter(obra_a_ser_entregue == "sim") %>%
@@ -373,6 +386,29 @@ chart_uf_g <- chart_uf %>%
 
 ggsave(chart_uf_g, file="chart_uf_g.png", height = 10, width=8)
 
+
+
+## Atrasadas por UF
+chart_uf_atrasadas <- obras_situacao_tb %>%
+  filter(obra_a_ser_entregue == "sim") %>%
+  group_by(UF, atrasada) %>%
+  summarise(total=n()) %>%
+  group_by(UF) %>%
+  mutate(obras_a_serem_entregues_uf = sum(total),
+         perc = round(total/obras_a_serem_entregues_uf, 2)) %>%
+  filter(atrasada == "sim")
+
+chart_uf_atrasadas$UF <- factor(chart_uf_atrasadas$UF, levels = chart_uf_atrasadas$UF[order(-chart_uf_atrasadas$perc)]) 
+
+
+chart_uf__atrasado_g <- chart_uf_atrasadas %>%
+  ggplot(aes(y=perc, x=UF)) + 
+  geom_bar(stat= "identity") + coord_flip() +
+  scale_y_continuous(labels = scales::percent, lim = c(0 ,.6)) + theme_bw() +
+  xlab("") + ylab("Percentual de obras atrasadas")
+
+ggsave(chart_uf__atrasado_g, file="chart_uf_g_atrasadas.png", height = 10, width=8)
+
 # correlação entre idh e obras paralisadas
 
 idh <- read.table("idh_estados.txt", sep="\t", dec=",", header=T,
@@ -391,23 +427,76 @@ idh_cor %>%
   ggplot(aes(x=idh_2010, y=perc)) + geom_point() +
   geom_smooth(method="lm")
 
+### Tabela e mapa de obras a serem entregues pro estado
+#importar o polígono contendo o mapa do Brasil
+br <- getData('GADM', country='BRA', level=1) # 
+
+# criando paleta
+pal27 <- viridis(27,option="C")
+
+obras_uf <- obras_situacao_tb %>%
+  filter(obra_a_ser_entregue == "sim") %>%
+  group_by(UF) %>%
+  summarise(obras_a_entregar = n()) %>%
+  ungroup() %>%
+  mutate(total = sum(obras_a_entregar),
+         perc = round(obras_a_entregar/total, 2))
+
+# importando tabela que converge sigla em extenso
+codigo_uf <- read_delim("codigo_uf.txt", delim="\t")
+
+# checando que nome dos estados bate
+codigo_uf$UFN %in% br$NAME_1
+
+obras_uf <- obras_uf %>%
+  inner_join(codigo_uf[,-1], by=c("UF"="Sigla")) %>%
+  rename(uf = UFN)
+
+
+br <- append_data(br, obras_uf, key.shp="NAME_1",key.data="uf", ignore.na = F)
+
+br$sigla <- str_replace(br$HASC_1,"BR.","")
+
+## cores
+
+region_col$mycolors[region_col$iso_a3 == "GBR"] <- "#00ff00"
+region_col$mycolors[region_col$iso_a3 == "FRA"] <- "#ff0000"
+region_col$mycolors[region_col$iso_a3 == "DEU"] <- "#ffff00"
+region_col$mycolors[region_col$iso_a3 == "ESP"] <- "#0000ff"
+
+#Import color selection from region_col dataframe into Europe SpatialPolygonDataFrame
+Europe$color <- region_col$mycolors
+
+
+## plotando o mapa
+perc_mapa_entregar <- tm_shape(br) + 
+  tm_fill(col="obras_a_entregar",
+          labels=c("De 0 a 200","De 200 a 400","De 400 a 600","De 600 a 800", "> 800"),
+          #palette= c(),
+          title="",
+          convert2density=F,
+          n=4) +
+  tm_borders(col="white",alpha=.8) +
+  tm_text("sigla",size=.8,legend.size.show=F) + # retirar commentário coloca sigla
+  # tm_compass(position=c("RIGHT","TOP"),type="4star")  +
+  tm_legend(position=c("left","bottom"), scale=1.2,
+            legend.title.size = 1.5, legend.text.size = 1.5) +
+  # tm_scale_bar() +
+  tm_layout(title="",title.size=1.3,scale=1.6)
+  # Obs. Se demorar muito para plotar, retire a última camada +tm_layout(...). Ela atrasa a plotagem, mas não apresenta problemas para salvar.
+
+perc_mapa_entregar
+
+save_tmap(perc_mapa_entregar,
+          "mapa_obras_a_entregar_com_sigla_v4.png", 
+          width = 10,height=10, dpi=300)
+
+write.table(obras_uf, "obras_uf.csv", sep=";", row.names=T)
+
+
 #obras canceladas 
 #numero de obras iniciadas exceto canceladas e concluidas
 3083 +1189 +510 +1414 #temos informação de gastos de apenas 6.196
-
-
-custo_paralisadas_tb$obras <- (ifelse(custo_paralisadas_tb$Situação == "Paralisada",
-                                      simec_gastos_tb$num_obras[simec_gastos_tb$Situação == "Paralisada"], custo_paralisadas_tb$obras))
-custo_paralisadas_tb$obras <- (ifelse(custo_paralisadas_tb$Situação == "Inacabada",
-                                      simec_gastos_tb$num_obras[simec_gastos_tb$Situação == "Inacabada"], custo_paralisadas_tb$obras))
-
-custo_paralisadas_tb
-sum(custo_paralisadas_tb$obras)
-
-custo_paralisadas %>%
-  summarise(custo = sum(pagamento_cte_jun17, na.rm=T)/1000000000) #1.429633 bilhões
-
-write.table(custo_paralisadas_tb, file="custo_paralisadas_tb.csv", row.names = F, sep=";")
 
 #quantas obras já deveriam ter sido concluídas de fato foram?
 
