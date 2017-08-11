@@ -1,5 +1,9 @@
+# Relação entere IDH e percentual de obras atrasadas por UF
+
+# instalar versão do github (usando devtools)
 library(janitor)
 
+# função que criei
 transform_city_name <- function (city_column, uf_column) 
 {
   city <- city_column
@@ -52,33 +56,38 @@ transform_city_name <- function (city_column, uf_column)
   
 }
 
+# seta locale
 locale("pt",  decimal_mark = ",")
 
 setwd("C:\\Users\\mgaldino\\2017\\Google\\Ta de Pe\\Arquivos")
 
+# carrega dados municipais
 atlas <- read_delim("dados_atlas_munic.txt", delim="\t")
 
+# limpa nomes das colunas
 atlas <- atlas %>%
   clean_names()
 
-head(atlas)
-
-
+# cria um df com nomes das colunas
 simec_atraso <- obras_situacao_tb %>%
   clean_names()
 
+# importa tabela com siglas das ufs, para fazer join
 codigo_uf <- read_delim("codigo_uf.txt", delim="\t")
 
+# limpa nome das colunas
 codigo_uf <- codigo_uf %>%
   clean_names()
 
+# corrige nomes de municípios no simec, para fazer o join correto
 simec1 <- simec_atraso %>%
   select(id, municipio, uf, paralisada_tb, atrasada, obra_a_ser_entregue) %>%
   mutate( municipio = case_when(municipio == "Balneário Rincão" ~ "Içara",
                                 TRUE ~ municipio),
           cidade_uf = transform_city_name(municipio, uf))
 
-
+# corrige nome dos municípios do atlas para fazer o join
+# faz o join por enquanto só com codigo_uf, para ter sigla
 atlas1 <- atlas %>%
   select(ano, uf,  municipio, idhm, idhm_e, idhm_l, idhm_r, pop) %>%
   filter(ano == 2010) %>%
@@ -92,12 +101,15 @@ atlas1 <- atlas %>%
   inner_join(codigo_uf, by="uf") %>%
   mutate(cidade_uf = transform_city_name(municipio, sigla))
 
+# cidades excluídas do join
 #      pescaria brava_sc ## faltando
 #   paraiso das aguas_ms ## faltando
 
+# join com simec
 simec_atlas <- simec1 %>%
   full_join(select(atlas1, -(uf:municipio)), by = "cidade_uf") 
 
+# cria função que gera meu idh com ponderação
 my_idh_mean <- function(rpc, educ, long, pop) {
   rpc_aux <- mean(rpc)
   educ_aux <- sum(educ*pop)/sum(pop)
@@ -105,7 +117,7 @@ my_idh_mean <- function(rpc, educ, long, pop) {
   idh <- (rpc_aux*educ_aux*long_aux)^(1/3)
 }
 
-
+#3 cria tabela com idh por uf
 idh <- simec_atlas %>%
   mutate(contador = ifelse(is.na(id), 0, 1),
          idhm = as.numeric(gsub(",", "\\.", idhm)),
@@ -120,12 +132,14 @@ idh <- simec_atlas %>%
             idh_uf_correto = my_idh_mean(educ=idhm_e, long=idhm_l, rpc=idhm_r, pop),
             perc = num_paralisadas/num_obras) 
 
+# calcula correlação
+# filtro NA pq entrou um na aí (acho que cidades q não deram join)
 idh %>%
   filter(!is.na(perc) & !is.na(idh_uf)) %>%
   summarise(cor(perc, idh_uf_correto))
 
 
-head(idh)
+# chart scatterplot idh e percentual de obra paralisada
 idh_uf_chart <- ggplot(idh, aes(idh_uf_correto, perc, label = uf)) + 
   geom_smooth(method="lm", se=F) +
 geom_text(aes(label=uf, size=2),hjust=0, vjust=0) + theme_bw() + 
