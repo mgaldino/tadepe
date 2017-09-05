@@ -1,4 +1,4 @@
-#3 Exemplo de utilização da API do Tá de Pé no R
+# Exemplo de utilização da API do Tá de Pé no R
 
 
 ## bibliotecas
@@ -12,11 +12,11 @@ token_meu <- "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoiYXBpLXRlc3
 # query de exemplo. Aqui, pega uma obra com id = 1018526
 query <- "http://tadepe.transparencia.org.br/api/projects/content?id=1018526"
 
-# requisiÃ§Ã£o GET. Usando header accept_json e Authorization  
+# requisição GET. Usando header accept_json e Authorization  
 req <- GET(query, accept_json(),
            add_headers(Authorization = token_meu))
 
-# checa status do request. Se der certo, Ã© invisÃ­vel (aka nÃ£o retorna nada)
+# checa status do request. Se der certo, é invisível (aka não retorna nada)
 stop_for_status(req)
 
 # for fromJSON(...)
