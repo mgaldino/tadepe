@@ -48,23 +48,49 @@ aux_j <- list()
 aux_i <- list()
 n <- length(type_project)
 k <- length(status)
+lista_df <- vector("list", n)
+paginas <- list()
 
 for (i in 1:n) {
+  contador <- 1
   for (j in 1:k) {
     url1 <- paste0(url, modifier0, modifier1, type_project[i],
                    modifier2, status[j])
    req <- GET(url1, accept_json(),
                add_headers(Authorization = token_meu))
+   
    paralisadas <- fromJSON(content(req,type="text"))
+   
+   # paginas[[j+(k*(i-1))]] <- paralisadas$links
+   # if(length(paginas[[j+(k*(i-1))]]) != 0) {
+   #   
+   # }
+   
+   if(length(paralisadas[[1]])!=0) {
+     paralisadas1 <- paralisadas[[1]] %>%
+       as.data.frame
+     
+     aux_j[[j]] <- paralisadas1[[3]]
+   } else {
+     contador <- contador - 1 # para que não fique elemento vazio na lista
+   }
 
-   paralisadas1 <- paralisadas[[1]] %>%
-     as.data.frame
-   aux_j[[j]] <- paralisadas1
     print(paste(paste("i é", i), " e ", paste("j é", j)))
+    contador <- contador + 1
   }
   aux_i[[i]] <- aux_j
+  lista_df[[i]] <- bind_rows(aux_i[[i]])
 }
 
+df_final <- bind_rows(lista_df)
+dim(df_final)
+
+for( i in 1:63) {
+  print(paginas[[i]])
+  print(i)
+} 
+length(paginas[[57]])
+length(paginas[[63]])
 
 # checa status do request. Se der certo, é invisível (aka não retorna nada)
 stop_for_status(req)
