@@ -54,12 +54,9 @@ gera_urls_app <- function() {
   k <- length(status)
   url <- "http://tadepe.transparencia.org.br/api/projects/content?"
  
-   modifier0 <- 'status=paralyzed&type_of_work=construction&funded_by=city'
+  modifier0 <- 'status=paralyzed&type_of_work=construction&funded_by=city'
   modifier1 <- "&type_of_project="
   modifier2 <- "&status="
-  
-  n <- length(type_project)
-  k <- length(status)
   
   for ( i in 1:n) {
     for ( j in 1:k) {
@@ -96,19 +93,18 @@ get_json <- function(sleep_time = .05) {
   return(list(obras, paginas))
 }
 
-
+obras_app <- function(sleep_time) {
+  lista_api <- get_json()
+  obras_json <- lista_api[[1]]
+  paginas <- lista_api[[2]]
+  
+}
 lista_df <- vector("list", n)
 paginas <- list()
 i <- 1
 
 while(finished != T) {
-    req <- GET(url[i], accept_json(),
-               add_headers(Authorization = token_meu))
 
-   paralisadas <- fromJSON(content(req,type="text"))
-   
-   paginas[[i]] <- paralisadas$links
-   
   if(length(paralisadas[[1]])!=0) {
        paralisadas1 <- paralisadas[[1]] %>%
        as.data.frame
